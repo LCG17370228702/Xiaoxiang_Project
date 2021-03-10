@@ -1,0 +1,156 @@
+from flask import Flask,render_template,url_for,request
+import pandas as pd 
+import pickle
+import re
+from sklearn.naive_bayes import MultinomialNB
+from joblib import dump, load
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import StratifiedKFold
+import numpy as np
+import jieba
+import re
+
+class Age_cls():
+    
+    def __init__(self,file_stop_words='E:\machinglearin\project1\language_detector\Flask-Deploy-Language-Detector-Machine-Learning-App\Data\stopwords.txt',classifier = MultinomialNB()):
+        self.classifier = classifier
+        self.vec = TfidfVectorizer(analyzer='word',max_features=4000)
+        self.stop_words(file_stop_words)
+    
+  
+    def stop_words(self,file_stoppath):
+        stopwords=pd.read_csv(file_stoppath,index_col=False,quoting=3,sep="\t",names=['stopword'], encoding='utf-8')
+        self.stopwords=stopwords['stopword'].values
+    
+    def process_data_line(self,data_line):
+        noise_pattern = re.compile("|".join(["http\S+", ":http\S+", "ｗｗｗ.+?\t",'\d+\@\S+']))
+        clean_text = re.sub(noise_pattern, "", data_line)
+        segs=jieba.lcut(clean_text.strip())
+        segs = list(filter(lambda x:len(x)>1, segs)) #没有解析出来的新闻过滤掉
+        segs = list(filter(lambda x:x not in self.stopwords, segs)) #把停用词过滤掉
+        return (" ".join(segs))
+        
+    # 特征构建
+    def features(self, X):
+        return self.vec.transform(X)
+
+    # 拟合数据
+    def fit(self, X, y,shuffle=True, n_folds=5):
+        return self.stratifiedkfold_cv(np.array(X),np.array(y),shuffle=True, n_folds=5)
+              
+    
+    def stratifiedkfold_cv(self,x, y, shuffle=True, n_folds=5):
+        stratifiedk_fold = StratifiedKFold(n_splits=n_folds, shuffle=shuffle)
+        history_score=[]
+        self.vec.fit(x)
+        for train_index, test_index in stratifiedk_fold.split(x, y):
+            X_train, X_test = x[train_index], x[test_index]
+            y_train,y_test = y[train_index],y[test_index]
+            self.classifier.fit(self.vec.transform(X_train),y_train)
+            history_score.append(self.classifier.score(self.vec.transform(X_test), y_test)) 
+        return history_score 
+    
+    # 预估类别
+    def predict(self, x):
+        return self.classifier.predict(self.features([x]))
+
+    # 测试集评分
+    def score(self, X, y):
+        return self.classifier.score(self.features(X), y)
+    
+    # 模型持久化存储
+    def save_model(self, path):
+        dump((self.classifier, self.vec), path)
+    
+    # 模型加载
+    def load_model(self, path):
+        self.classifier, self.vec = load(path)
+
+class Third_Sample_Cls():
+    
+    def __init__(self,file_stop_words='E:\machinglearin\project1\language_detector\Flask-Deploy-Language-Detector-Machine-Learning-App\Data\stopwords.txt',classifier = MultinomialNB()):
+        self.classifier = classifier
+        self.vec = TfidfVectorizer(analyzer='word',max_features=4000)
+        self.stop_words(file_stop_words)
+    
+  
+    def stop_words(self,file_stoppath):
+        stopwords=pd.read_csv(file_stoppath,index_col=False,quoting=3,sep="\t",names=['stopword'], encoding='utf-8')
+        self.stopwords=stopwords['stopword'].values
+    
+    def process_data_line(self,data_line):
+        noise_pattern = re.compile("|".join(["http\S+", ":http\S+", "ｗｗｗ.+?\t",'\d+\@\S+']))
+        clean_text = re.sub(noise_pattern, "", data_line)
+        segs=jieba.lcut(clean_text.strip())
+        segs = list(filter(lambda x:len(x)>1, segs)) #没有解析出来的新闻过滤掉
+        segs = list(filter(lambda x:x not in self.stopwords, segs)) #把停用词过滤掉
+        return (" ".join(segs))
+        
+    # 特征构建
+    def features(self, X):
+        return self.vec.transform(X)
+
+    # 拟合数据
+    def fit(self, X, y,y_flg,shuffle=True, n_folds=5):
+        return self.skfold_gender_cv(x=np.array(X),y=np.array(y),y_flag = np.array(y_flg),shuffle=shuffle, n_folds=n_folds)
+              
+    
+    def skfold_gender_cv(self,x, y,y_flag,shuffle=True, n_folds=5):
+        stratifiedk_fold = StratifiedKFold(n_splits=n_folds, shuffle=shuffle)
+        history_score=[]
+        self.vec.fit(x)
+        for train_index, test_index in stratifiedk_fold.split(x, y_flag):
+            X_train, X_test = x[train_index],x[test_index]
+            y_train,y_test = y[train_index],y[test_index]
+            self.classifier.fit( self.vec.transform(X_train),y_train)
+            history_score.append(self.classifier.score( self.vec.transform(X_test), y_test)) 
+        return history_score 
+    
+    # 预估类别
+    def predict(self, x):
+        return self.classifier.predict(self.features([x]))
+
+    # 测试集评分
+    def score(self, X, y):
+        return self.classifier.score(self.features(X), y)
+    
+    # 模型持久化存储
+    def save_model(self, path):
+        dump((self.classifier, self.vec), path)
+    
+    # 模型加载
+    def load_model(self, path):
+        self.classifier, self.vec = load(path)
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+	return render_template('home.html')
+
+@app.route('/predict',methods=['POST'])
+def predict():
+	age_model_path = "E:/machinglearin/project1/language_detector/Flask-Deploy-Language-Detector-Machine-Learning-App/model/age_textcls.model"
+	education_path = "E:/machinglearin/project1/language_detector/Flask-Deploy-Language-Detector-Machine-Learning-App/model/education_textcls.model"
+	gender_model = "E:/machinglearin/project1/language_detector/Flask-Deploy-Language-Detector-Machine-Learning-App/model/gender_textcls.model"
+	my_language_detector = Age_cls()
+	my_language_detector.load_model(age_model_path) 
+	
+	education_language_detector = Age_cls()
+	education_language_detector.load_model(education_path)
+	
+	gender_language_detector = Third_Sample_Cls()
+	gender_language_detector.load_model(gender_model)
+
+	if request.method == 'POST':
+		message = request.form['message']
+		data_process = my_language_detector.process_data_line(message)
+		my_prediction = my_language_detector.predict(data_process)
+		my_prediction2 = education_language_detector.predict(data_process)
+		my_prediction3 = gender_language_detector.predict(data_process)
+	return render_template('result.html',prediction = my_prediction[0],prediction2 = my_prediction2[0],prediction3 = my_prediction3[0])
+
+
+
+if __name__ == '__main__':
+	app.run(debug=True)

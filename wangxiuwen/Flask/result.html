@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+
+	<header>
+		<div class="container">
+		<div id="brandname">
+			算法应用
+		</div>
+		<h2>机器学习语种识别器</h2>
+		
+	</div>
+	</header>
+	<p style="color:blue;font-size:20;text-align: left;"><b>算法检测结果如下</b></p>
+	<div class="results">
+
+
+		
+	{% if prediction == 1%}
+	<h2>预测年龄 <font color="red">0-18岁</font></h2>
+	{% elif prediction == 2%}
+	<h2>预测年龄 <font color="red">19-23岁</font></h2>
+	{% elif prediction == 3%}
+	<h2>预测年龄 <font color="red">24-30岁</font></h2>
+	{% elif prediction == 4%}
+	<h2>预测年龄 <font color="red">31-40岁</font></h2>
+	{% elif prediction == 5%}
+	<h2>预测年龄 <font color="red">41-50岁</font></h2>
+	{% elif prediction == 6%}
+	<h2>预测年龄 <font color="red"> 51-99岁</font></h2>
+	{% endif %}
+	
+	{% if prediction2 == 1%}
+	<h2>预测学历 <font color="red">博士</font></h2>
+	{% elif prediction2 == 2%}
+	<h2>预测学历 <font color="red">硕士</font></h2>
+	{% elif prediction2 == 3%}
+	<h2>预测学历 <font color="red">大学生</font></h2>
+	{% elif prediction2 == 4%}
+	<h2>预测学历 <font color="red">高中</font></h2>
+	{% elif prediction2 == 5%}
+	<h2>预测学历 <font color="red">初中</font></h2>
+	{% elif prediction2 == 6%}
+	<h2>预测学历 <font color="red"> 小学</font></h2>
+	{% endif %}
+	
+	{% if prediction3 == 1%}
+	<h2>预测性别  <font color="red">男</font></h2>
+	{% elif prediction3 == 2%}
+	<h2>预测性别 <font color="red">女</font></h2>
+	{% endif %}
+
+	</div>
+
+</body>
+</html>
